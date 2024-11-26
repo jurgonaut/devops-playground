@@ -1,0 +1,41 @@
+- name: Install LAMP packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "lamp" ]
+
+- name: Install php extensions
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ php_modules }}"
+  tags: [ 'php-modules' ]
+
+- name: Remove default apache host file
+  ansible.builtin.file:
+    state: absent
+    path: /etc/apache2/sites-enabled/000-default.conf
+  tags: [ "apache-config" ]
+
+- name: Copy apache2 host files
+  ansible.builtin.template:
+    src: templates/default.conf.j2
+    dest: /etc/apache2/sites-enabled/default.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart Apache
+  tags: [ "apache-config" ]
+
+- name: Copy phpinfo file
+  ansible.builtin.copy:
+    src: templates/index.php
+    dest: /var/www/html
+    owner: www-data
+    group: www-data
+    mode: '0775'
+  tags: [ "apache-config" ]
