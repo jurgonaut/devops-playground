@@ -29,16 +29,13 @@
     remote_src: yes
   tags: [ "install" ]
 
-- name: Remove Wordpress zip
+- name: Remove tmp folders
   ansible.builtin.file:
     path: /tmp/wordpress-{{ wordpress_version }}.zip
     state: absent
-  tags: [ "install" ]
-
-- name: Remove Wordpress tmp folder
-  ansible.builtin.file:
-    path: /tmp/wordpress
-    state: absent
+  loop:
+    - /tmp/wordpress-{{ wordpress_version }}.zip
+    - /tmp/wordpress
   tags: [ "install" ]
 
 - name: Copy wp config
