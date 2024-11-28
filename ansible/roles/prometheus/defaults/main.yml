@@ -1,0 +1,3 @@
+prometheus_version: 2.53.3
+prometheus_target: localhost:9090
+node_exporter_target: localhost:9200

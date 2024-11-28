@@ -1,0 +1,8 @@
+---
+- name: Setup LAMP
+  hosts: all
+  remote_user: ubuntu
+  become: true
+  roles:
+    - { role: roles/prometheus_node_exporter }
+    - { role: roles/prometheus }

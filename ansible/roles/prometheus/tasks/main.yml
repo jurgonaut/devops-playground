@@ -1,0 +1,113 @@
+- name: Download Prometheus
+  ansible.builtin.get_url:
+    url: https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
+    dest: /tmp/prometheus-{{ prometheus_version }}.tar.gz
+  tags: [ "install" ]
+
+- name: Extract Prometheus
+  ansible.builtin.unarchive:
+    src: /tmp/prometheus-{{ prometheus_version }}.tar.gz
+    dest: /tmp
+    remote_src: yes
+  tags: [ "install" ]
+
+- name: Move execs to binary
+  ansible.builtin.copy:
+    src: /tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}
+    dest: /usr/local/bin
+    remote_src: yes
+    owner: root
+    group: root
+    mode: "0775"
+  loop:
+    - prometheus
+    - promtool
+  tags: [ "install" ]
+
+- name: Create Prometheus group
+  ansible.builtin.group:
+    name: prometheus
+    state: present
+  tags: [ "install" ]
+
+- name: Create Prometheus user
+  ansible.builtin.user:
+    name: prometheus
+    group: prometheus
+    state: present
+  tags: [ "install" ]
+
+- name: Create configuration dir
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: "0775"
+  loop:
+    - /etc/prometheus
+    - /var/lib/prometheus
+  tags: [ "install" ]
+
+- name: Copy config files
+  ansible.builtin.copy:
+    src: /tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}
+    dest: /etc/prometheus
+    remote_src: yes
+    owner: prometheus
+    group: prometheus
+    mode: "0775"
+  loop:
+    - consoles
+    - console_libraries
+  tags: [ "install" ]
+
+- name: Remove tmp files and dirs
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/prometheus-{{ prometheus_version }}.linux-amd64
+    - /tmp/prometheus-{{ prometheus_version }}.tar.gz
+  tags: [ "install" ]
+
+- name: Populate service facts
+  ansible.builtin.service_facts:
+  tags: [ "config" ]
+
+- name: Copy Prometheus configuration (without node exporter)
+  ansible.builtin.template:
+    src: templates/prometheus.yml.j2
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: "0775"
+  when: "'node_exporter.service' not in services"
+  tags: [ "config" ]
+
+- name: Copy Prometheus configuration (with node exporter)
+  ansible.builtin.template:
+    src: templates/prometheus-node-exporter.yml.j2
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: "0775"
+  when: "'node_exporter.service' in services and ansible_facts['services']['node_exporter.service']['state'] == 'running'"
+  tags: [ "config" ]
+
+- name: Copy Prometheus SystemD service
+  ansible.builtin.copy:
+    src: templates/prometheus.service
+    dest: /etc/systemd/system/prometheus.service
+    owner: root
+    group: root
+    mode: "0644"
+  tags: [ "config" ]
+
+- name: Enable the Prometheus service
+  ansible.builtin.systemd:
+    name: prometheus.service
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  tags: [ "config" ]
