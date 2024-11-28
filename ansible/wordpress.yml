@@ -1,0 +1,14 @@
+---
+- name: Setup LAMP and Wordpress
+  hosts: all
+  remote_user: ubuntu
+  become: true
+  vars:
+    # Example overwrite vars from role, ideally the password would come form a vault of AWS SSM
+    - domain: devops-playground-wp.com
+    - mysql_db: "website"
+    - mysql_user: "admin"
+    - mysql_pass: "Supersecret1234"
+  roles:
+    - { role: roles/lamp }
+    - { role: roles/wordpress }
