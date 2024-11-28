@@ -1,0 +1,51 @@
+- name: Install required packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "system" ]
+
+- name: Download Wordpress zip
+  ansible.builtin.get_url:
+    url: https://wordpress.org/wordpress-{{ wordpress_version }}.zip
+    dest: /tmp/wordpress-{{ wordpress_version }}.zip
+  tags: [ "install" ]
+
+- name: Extract Wordpress zip
+  ansible.builtin.unarchive:
+    src: /tmp/wordpress-{{ wordpress_version }}.zip
+    dest: /tmp
+    remote_src: yes
+  tags: [ "install" ]
+
+- name: Copy Wordpress files
+  ansible.builtin.copy:
+    src: /tmp/wordpress/
+    dest: /var/www/{{ domain }}
+    owner: www-data
+    group: www-data
+    mode: "0775"
+    remote_src: yes
+  tags: [ "install" ]
+
+- name: Remove Wordpress zip
+  ansible.builtin.file:
+    path: /tmp/wordpress-{{ wordpress_version }}.zip
+    state: absent
+  tags: [ "install" ]
+
+- name: Remove Wordpress tmp folder
+  ansible.builtin.file:
+    path: /tmp/wordpress
+    state: absent
+  tags: [ "install" ]
+
+- name: Copy wp config
+  ansible.builtin.template:
+    src: templates/wp-config.php.j2
+    dest: /var/www/{{ domain }}/wp-config.php
+    owner: www-data
+    group: www-data
+    mode: "0644"
+  tags: [ "config" ]

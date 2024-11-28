@@ -1,0 +1,17 @@
+wordpress_version: 6.7.1
+domain: devops-playground.com
+
+mysql_host: "localhost"
+mysql_db: "db"
+mysql_user: "user"
+mysql_pass: "pass"
+
+# Wordpress secrets
+auth_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+secure_auth_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+logged_in_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+nonce_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+auth_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+secure_auth_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+logged_in_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+nonce_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
