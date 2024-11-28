@@ -1,1 +1,1 @@
-Example with `EC2` and `LAMP` stack configured with `Ansible`.
+Example with `EC2` with `LAMP` and `Wordpress`.
