@@ -1,0 +1,5 @@
+domain: devops-playground.com
+
+mysql_db: "db"
+mysql_user: "user"
+mysql_pass: "pass"

@@ -1,10 +1,10 @@
-- name: Install LAMP packages
+- name: Install system packages
   ansible.builtin.apt:
     name: "{{ item }}"
     update_cache: yes
     state: present
   loop: "{{ system_modules }}"
-  tags: [ "lamp" ]
+  tags: [ "system" ]
 
 - name: Install php extensions
   ansible.builtin.apt:
@@ -12,30 +12,67 @@
     update_cache: yes
     state: present
   loop: "{{ php_modules }}"
-  tags: [ 'php-modules' ]
+  tags: [ "system" ]
 
-- name: Remove default apache host file
+- name: Create DB
+  community.mysql.mysql_db:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: "{{ mysql_db }}"
+    state: present
+  tags: [ "db" ]
+
+- name: Create DB user
+  community.mysql.mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    state: present
+    name: "{{ mysql_user }}"
+    password: "{{ mysql_pass }}"
+    priv: "{{ mysql_db }}.*:ALL,GRANT"
+  tags: [ "db" ]
+
+- name: Create a directory for website
   ansible.builtin.file:
-    state: absent
-    path: /etc/apache2/sites-enabled/000-default.conf
-  tags: [ "apache-config" ]
-
-- name: Copy apache2 host files
-  ansible.builtin.template:
-    src: templates/default.conf.j2
-    dest: /etc/apache2/sites-enabled/default.conf
-    owner: root
-    group: root
-    mode: '0644'
-  notify:
-    - Restart Apache
-  tags: [ "apache-config" ]
-
-- name: Copy phpinfo file
-  ansible.builtin.copy:
-    src: templates/index.php
-    dest: /var/www/html
+    path: /var/www/{{ domain }}
+    state: directory
     owner: www-data
     group: www-data
-    mode: '0775'
-  tags: [ "apache-config" ]
+    mode: "0775"
+  tags: [ "apache" ]
+
+- name: Enable Apache rewrite module
+  ansible.builtin.shell: |
+    a2enmod rewrite
+  notify:
+    - Restart Apache
+  register: output
+  changed_when: output.rc != 0 
+  tags: [ "apache" ]
+
+- name: Disable default host
+  ansible.builtin.shell: |
+    a2dissite 000-default.conf
+  notify:
+    - Restart Apache
+  register: output
+  changed_when: output.rc != 0 
+  tags: [ "apache" ]
+
+- name: Copy website vhost files
+  ansible.builtin.template:
+    src: templates/default.conf.j2
+    dest: /etc/apache2/sites-available/{{ domain }}.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Restart Apache
+  tags: [ "apache" ]
+
+- name: Enable website
+  ansible.builtin.shell: |
+    a2ensite {{ domain }}.conf
+  notify:
+    - Restart Apache
+  register: output
+  changed_when: output.rc != 0 
+  tags: [ "apache" ]
