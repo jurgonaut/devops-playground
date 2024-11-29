@@ -1,0 +1,6 @@
+---
+- name: Setup LAMP
+  hosts: "{{ variable_host | default('nodes') }}"
+  become: true
+  roles:
+    - { role: roles/prometheus_node_exporter }
