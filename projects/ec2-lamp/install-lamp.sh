@@ -11,7 +11,7 @@ ANSIBLE_TAG=${1:-}
 cp "${SSH_KEY}" "/tmp/${SSH_KEY}"
 chmod 600 "/tmp/${SSH_KEY}"
 
-cli_command=(ansible-playbook --private-key="/tmp/${SSH_KEY}" -i "${SERVER_IP}," "${SCRIPT_DIR}/../../ansible/lamp.yml")
+cli_command=(ansible-playbook --private-key="/tmp/${SSH_KEY}" -i "${SERVER_IP}," -u ubuntu --extra-vars "variable_host=all" "${SCRIPT_DIR}/../../ansible/lamp.yml")
 if [ -n "${ANSIBLE_TAG}" ]; then
     cli_command+=(--tags "${ANSIBLE_TAG}")
 fi

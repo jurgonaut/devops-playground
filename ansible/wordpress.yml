@@ -1,7 +1,6 @@
 ---
 - name: Setup LAMP and Wordpress
-  hosts: all
-  remote_user: ubuntu
+  hosts: "{{ variable_host | default('web') }}"
   become: true
   vars:
     # Example overwrite vars from role, ideally the password would come form a vault of AWS SSM
