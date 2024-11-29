@@ -1,0 +1,6 @@
+---
+- name: Setup Grafana
+  hosts: "{{ variable_host | default('monitor') }}"
+  become: true
+  roles:
+    - { role: roles/grafana }

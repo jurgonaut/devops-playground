@@ -1,0 +1,62 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "system" ]
+
+- name: Download Grafana
+  ansible.builtin.get_url:
+    url: https://dl.grafana.com/oss/release/grafana_{{ grafana_version }}_amd64.deb
+    dest: /tmp/grafana-{{ grafana_version }}.deb
+  tags: [ "install" ]
+
+- name: Install Grafana
+  ansible.builtin.apt:
+    deb: /tmp/grafana-{{ grafana_version }}.deb
+  tags: [ "install" ]
+
+- name: Copy data source config
+  ansible.builtin.template:
+    src: templates/prometheus-ds.yml.j2
+    dest: /etc/grafana/provisioning/datasources/prometheus.yaml
+    owner: root
+    group: prometheus
+    mode: "0775"
+  tags: [ "config" ]
+
+- name: Copy dashboard config
+  ansible.builtin.copy:
+    src: templates/dashboard.yml
+    dest: /etc/grafana/provisioning/dashboards/dashboard.yaml
+    owner: root
+    group: prometheus
+    mode: "0775"
+  tags: [ "config" ]
+
+- name: Create dir for dashboard
+  ansible.builtin.file:
+    path: /var/lib/grafana/dashboards/
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: "0750"
+  tags: [ "config" ]
+
+- name: Copy Prometheus dashboard
+  ansible.builtin.copy:
+    src: templates/prometheus-dashboard.json
+    dest: /var/lib/grafana/dashboards/prometheus-dashboard.json
+    owner: prometheus
+    group: prometheus
+    mode: "0775"
+  tags: [ "config" ]
+
+- name: Enable the Grafana service
+  ansible.builtin.systemd:
+    name: grafana-server.service
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  tags: [ "config" ]
