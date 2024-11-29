@@ -1,0 +1,6 @@
+---
+- name: Setup LAMP
+  hosts: "{{ variable_host | default('monitor') }}"
+  become: true
+  roles:
+    - { role: roles/prometheus }
