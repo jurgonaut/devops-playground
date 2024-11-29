@@ -1,7 +1,6 @@
 ---
 - name: Setup LAMP
-  hosts: all
-  remote_user: ubuntu
+  hosts: "{{ variable_host | default('web') }}"
   become: true
   roles:
     - { role: roles/lamp }
