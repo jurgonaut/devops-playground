@@ -71,28 +71,25 @@
     - /tmp/prometheus-{{ prometheus_version }}.tar.gz
   tags: [ "install" ]
 
-- name: Populate service facts
-  ansible.builtin.service_facts:
+# Get the nodes ips from the `nodes` group.
+- name: get nodes ips
+  set_fact:
+    node_exporter_targets : "{{ groups['nodes'] | map('regex_replace', '$', ':9200') }}"
+  when: "'nodes' in groups"
   tags: [ "config" ]
 
-- name: Copy Prometheus configuration (without node exporter)
+- name: Node exporter targets
+  debug:
+    var: node_exporter_targets
+  tags: [ "config" ]
+
+- name: Copy Prometheus configuration
   ansible.builtin.template:
     src: templates/prometheus.yml.j2
     dest: /etc/prometheus/prometheus.yml
     owner: prometheus
     group: prometheus
     mode: "0775"
-  when: "'node_exporter.service' not in services"
-  tags: [ "config" ]
-
-- name: Copy Prometheus configuration (with node exporter)
-  ansible.builtin.template:
-    src: templates/prometheus-node-exporter.yml.j2
-    dest: /etc/prometheus/prometheus.yml
-    owner: prometheus
-    group: prometheus
-    mode: "0775"
-  when: "'node_exporter.service' in services and ansible_facts['services']['node_exporter.service']['state'] == 'running'"
   tags: [ "config" ]
 
 - name: Copy Prometheus SystemD service
