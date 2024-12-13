@@ -1,0 +1,22 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby
+
+Vagrant.configure("2") do |config|
+config.ssh.insert_key = false
+config.vm.provider :virtualbox do |vb|
+vb.customize ["modifyvm", :id, "--memory", "2064"]
+end
+
+config.vm.define "kubernetes_main" do |kubernetes_main|
+kubernetes_main.vm.hostname = "kubernetes-main.dev"
+kubernetes_main.vm.box = "bento/ubuntu-22.04"
+kubernetes_main.vm.network "private_network", ip: "192.168.56.10"
+end
+
+config.vm.define "kubernetes_worker_1" do |kubernetes_worker_1|
+kubernetes_worker_1.vm.hostname = "kubernetes-worker-1.dev"
+kubernetes_worker_1.vm.box = "bento/ubuntu-22.04"
+kubernetes_worker_1.vm.network "private_network", ip: "192.168.56.20"
+end
+
+end

@@ -1,0 +1,3 @@
+system_modules: [ 'ca-certificates', 'curl', 'apt-transport-https', 'gpg' ]
+docker_modules: [ 'docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin' ]
+kubernetes_modules: [ 'kubelet', 'kubeadm', 'kubectl' ]

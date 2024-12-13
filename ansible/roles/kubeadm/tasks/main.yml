@@ -1,0 +1,130 @@
+- name: Turn off swap
+  ansible.builtin.shell: |
+    swapoff -a
+  tags: [ "swap" ]
+
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "system" ]
+
+- name: Create keyring folder and file
+  file:
+    path: "{{ item.path }}"
+    state: "{{ item.state }}"
+  loop:
+    - { path: /etc/apt/keyrings, state: directory }
+    - { path: /etc/apt/keyrings/docker.asc, state: touch }
+
+- name: Add docker gpg key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    keyring: /etc/apt/keyrings/docker.asc
+  tags: [ "system" ]
+
+- name: Add docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+  tags: [ "system" ]
+
+- name: Install docker
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ docker_modules }}"
+  tags: [ "system" ]
+
+- name: Download cri-docker
+  ansible.builtin.get_url:
+    url: https://github.com/Mirantis/cri-dockerd/releases/download/v{{ cri_docker_version }}/cri-dockerd_{{ cri_docker_version }}.3-0.debian-bookworm_amd64.deb
+    dest: /tmp/cri-docker-{{ cri_docker_version }}.deb
+  tags: [ "system" ]
+
+- name: Install cri-docker
+  ansible.builtin.apt:
+    deb: /tmp/cri-docker-{{ cri_docker_version }}.deb
+  tags: [ "system" ]
+
+- name: Create keyring folder and file
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: "{{ item.state }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /etc/apt/keyrings, state: directory, mode: 775 }
+    - { path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg, state: touch, mode: 644 }
+  tags: [ "kubernetes" ]
+
+- name: Add kubernetes gpg key
+  ansible.builtin.apt_key:
+    url: https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key
+    keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  tags: [ "kubernetes" ]
+
+- name: Add kubernetes repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"
+    state: present
+  tags: [ "kubernetes" ]
+
+- name: Install kubernetes packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ kubernetes_modules }}"
+  tags: [ "kubernetes" ]
+
+- name: Enable kubelet service
+  ansible.builtin.service:
+    name: kubelet
+    state: started
+  tags: [ "kubernetes" ]
+
+- name: Check if etcd exists
+  stat:
+    path: /var/lib/etcd
+  register: kube_initialized
+  tags: [ "kubernetes" ]
+
+- name: Init
+  ansible.builtin.command: |
+    kubeadm init --cri-socket unix:///var/run/cri-dockerd.sock
+  when: not kube_initialized.stat.exists
+  tags: [ "kubernetes" ]
+
+- name: Create .kube directory
+  ansible.builtin.file:
+    path: "/home/{{ user }}/.kube"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ group }}"
+    mode: "0775"
+  when: not kube_initialized.stat.exists
+  tags: [ "kubernetes" ]
+
+- name: Copy admin conf
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ user }}/.kube/config"
+    owner: "{{ user }}"
+    group: "{{ group }}"
+    mode: "0775"
+    remote_src: yes
+  when: not kube_initialized.stat.exists
+  tags: [ "kubernetes" ]
+
+- name: Apply network configuration
+  become: true
+  become_user: '{{ user }}'
+  ansible.builtin.command: |
+    kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+  when: not kube_initialized.stat.exists
+  tags: [ "kubernetes" ]

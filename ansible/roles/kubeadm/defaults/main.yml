@@ -1,0 +1,4 @@
+kubeadm_version: 2.53.3
+cri_docker_version: 0.3.15
+user: vagrant
+group: vagrant

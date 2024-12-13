@@ -1,0 +1,6 @@
+---
+- name: Setup Kubernetes main
+  hosts: "{{ variable_host | default('kubernetes-main') }}"
+  become: true
+  roles:
+    - { role: roles/kubeadm }
