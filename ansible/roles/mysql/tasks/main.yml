@@ -1,0 +1,119 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "system" ]
+
+- name: Download libssl1.1
+  ansible.builtin.get_url:
+    url: http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_amd64.deb
+    dest: /tmp
+  tags: [ "system" ]
+
+- name: Install libssl1.1
+  ansible.builtin.apt:
+    deb: /tmp/libssl1.1_1.1.0g-2ubuntu4_amd64.deb
+  tags: [ "system" ]
+
+- name: Remove libssl deb
+  ansible.builtin.file:
+    path: /tmp/libssl1.1_1.1.0g-2ubuntu4_amd64.deb
+    state: absent
+  tags: [ "system" ]
+
+- name: Check if Mysql service exists
+  ansible.builtin.stat:
+    path: /lib/systemd/system/mysql.service
+  register: mysql_installed
+  tags: [ "install" ]
+
+- name: Download Mysql
+  ansible.builtin.get_url:
+    # Need to specify the user agent otherwise you get an 403 HTTP error
+    headers:
+      user-agent: curl/7.81.0
+    url: "{{ mysql_download_url }}"
+    dest: /tmp
+  when: not mysql_installed.stat.exists
+  tags: [ "install" ]
+
+- name: Extract tar
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ mysql_download_url.split('/')[-1] }}"
+    dest: /tmp
+    remote_src: yes
+  when: not mysql_installed.stat.exists
+  tags: [ "install" ]
+
+# Some files are present on some versions and some are not, check if file exists before installing
+- name: Install mysql
+  ansible.builtin.shell: |
+    export DEBIAN_FRONTEND=noninteractive
+    dpkg -i mysql-common_*.deb
+    if [ -f  mysql-community-client-core_*.deb ]; then
+      dpkg -i mysql-community-client-core_*.deb
+    fi
+    dpkg -i mysql-community-client_*.deb
+    dpkg -i mysql-client_*.deb
+    if [ -f mysql-community-server-core_*.deb ]; then
+      dpkg -i mysql-community-server-core_*.deb
+    fi
+    dpkg -i mysql-community-server_*.deb
+    dpkg -i mysql-server_*.deb
+  args:
+    chdir: /tmp
+  when: not mysql_installed.stat.exists
+  tags: [ "install" ]
+
+- name: Find mysql files
+  ansible.builtin.find:
+    paths: /tmp
+    patterns: "mysql-*.deb"
+  register: mysql_files
+
+- name: Cleanup Mysql files
+  ansible.builtin.file:
+    path: "{{ item['path'] }}"
+    state: absent
+  with_items: "{{ mysql_files['files'] }}"
+  tags: [ "install" ]
+
+- name: Find mysql lib files
+  ansible.builtin.find:
+    paths: /tmp
+    patterns: "libmysql*.deb"
+  register: mysql_lib_files
+
+- name: Cleanup Mysql libs
+  ansible.builtin.file:
+    path: "{{ item['path'] }}"
+    state: absent
+  with_items: "{{ mysql_lib_files['files'] }}"
+  tags: [ "install" ]
+
+- name: Remove mysql tar
+  ansible.builtin.file:
+    path: "/tmp/{{ mysql_download_url.split('/')[-1] }}"
+    state: absent
+  tags: [ "install" ]
+
+- name: update mysql root password for root account
+  mysql_user:
+    name: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    host: 'localhost'
+    password: '{{ mysql_root_pass }}'
+    priv: "*.*:ALL,GRANT"
+    check_implicit_admin: true
+  when: not mysql_installed.stat.exists
+  tags: [ 'configure' ]
+
+- name: Enable the Mysql service
+  ansible.builtin.systemd:
+    name: mysql.service
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  tags: [ 'configure' ]

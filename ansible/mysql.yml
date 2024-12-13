@@ -1,0 +1,6 @@
+---
+- name: Setup Mysql from binary
+  hosts: "{{ variable_host | default('mysql') }}"
+  become: true
+  roles:
+    - { role: roles/mysql }

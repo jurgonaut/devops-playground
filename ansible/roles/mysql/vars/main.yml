@@ -1,0 +1,1 @@
+system_modules: [ 'libaio1', 'libmecab2', 'libtinfo5', 'libncurses5', 'python-mysqldb' ]
