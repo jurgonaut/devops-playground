@@ -1,0 +1,13 @@
+- name: Loop vars
+  hosts: servers
+  connection: local
+  tasks:
+    - name: Loop hosts
+      ansible.builtin.debug:
+        msg: "{{ item }}"
+      with_items: "{{ groups['servers'] }}"
+
+    - name: Loop hosts with vars
+      ansible.builtin.debug:
+        msg: "{{ item }} - {{ hostvars[item]['os'] }} {{ ram }} {{ disk }}"
+      with_items: "{{ groups['servers'] }}"

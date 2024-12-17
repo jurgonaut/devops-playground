@@ -1,0 +1,3 @@
+[servers]
+host1.local os=debian
+host2.local os=ubuntu
