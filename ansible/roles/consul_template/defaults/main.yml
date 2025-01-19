@@ -1,0 +1,5 @@
+version: 0.39.1
+configuration_template_path:
+systemd_service_template_path:
+managed_template_src:
+managed_template_dest:

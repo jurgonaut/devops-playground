@@ -1,0 +1,90 @@
+- name: Install system modules
+  ansible.builtin.apt:
+    name: unzip
+    update_cache: yes
+    state: present
+  tags: [ "consul-template" ]
+
+- name: Download Consul template zip
+  ansible.builtin.get_url:
+    url: "https://releases.hashicorp.com/consul-template/{{ version }}/consul-template_{{ version }}_linux_amd64.zip"
+    dest: /tmp/consul-template.zip
+  tags: [ "consul-template" ]
+
+- name: Create dir
+  ansible.builtin.file:
+    path: /tmp/consul-template
+    state: directory
+  tags: [ "consul-template" ]
+
+- name: Extract
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/consul-template.zip
+    dest: /tmp/consul-template
+  tags: [ "consul-template" ]
+
+- name: Move Consul tempalte to bin
+  ansible.builtin.copy:
+    remote_src: true
+    src: /tmp/consul-template/consul-template
+    dest: /usr/local/bin/consul-template
+    owner: root
+    group: root
+    mode: "0755"
+  tags: [ "consul-template" ]
+
+- name: Remove tmp files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/consul-template.zip
+    - /tmp/consul-template
+  tags: [ "consul-template" ]
+
+- name: Make dir for Consul template
+  ansible.builtin.file:
+    path: /etc/consul-template.d
+    state: directory
+  tags: [ "consul-template" ]
+
+- name: Copy Consul template config
+  ansible.builtin.copy:
+    src: "{{ configuration_template_path }}"
+    dest: /etc/consul-template.d/consul-template.hcl
+  tags: [ "consul-template" ]
+
+- name: Copy managed template
+  ansible.builtin.copy:
+    src: "{{ managed_template_src }}"
+    dest: "{{ managed_template_dest }}"
+  tags: [ "consul-template" ]
+
+# This should not be here
+# - name: Copy haproxy cfg template
+#   ansible.builtin.copy:
+#     src: templates/haproxy.cfg.tpl
+#     dest: /etc/haproxy/haproxy.cfg.tpl
+#   tags: [ "consul-template" ]
+
+# # This should not be here
+# - name: Copy Consul template config
+#   ansible.builtin.copy:
+#     src: templates/consul-template.hcl
+#     dest: /etc/consul.d/consul-template.hcl
+#   tags: [ "consul-template" ]
+
+- name: Copy Consul template Systemd config
+  ansible.builtin.template:
+    src: "{{ systemd_service_template_path }}"
+    dest: /etc/systemd/system/consul-template.service
+  tags: [ "consul-template" ]
+
+- name: Enable Consul template service
+  ansible.builtin.systemd:
+    name: consul-template
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  tags: [ "consul-template" ]
