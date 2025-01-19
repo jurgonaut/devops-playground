@@ -1,0 +1,83 @@
+- name: Add consul GPG key
+  ansible.builtin.apt_key:
+    url: https://apt.releases.hashicorp.com/gpg
+    state: present
+  tags: [ "consul" ]
+
+- name: Add to apt source
+  ansible.builtin.apt_repository:
+    repo: "deb https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+  tags: [ "consul" ]
+
+- name: Install consul
+  ansible.builtin.apt:
+    name: consul
+    update_cache: yes
+    state: present
+  tags: [ "consul" ]
+
+- name: Copy Consul config
+  ansible.builtin.template:
+    src: "{{ configuration_template_path }}"
+    dest: /etc/consul.d/consul.hcl
+    owner: consul
+    group: consul
+    mode: "0644"
+  tags: [ "consul" ]
+
+# This should not be here
+# - name: Copy Consul server config
+#   ansible.builtin.template:
+#     src: templates/consul-server.j2
+#     dest: /etc/consul.d/consul.hcl
+#   when: server
+#   tags: [ "consul" ]
+
+# # This should not be here
+# - name: Copy Client server config
+#   ansible.builtin.template:
+#     src: templates/consul-client.j2
+#     dest: /etc/consul.d/consul.hcl
+#   when: not server
+#   tags: [ "consul" ]
+
+- name: Create dir for logs
+  ansible.builtin.file:
+    path: /var/log/consul
+    state: directory
+    owner: consul
+    group: consul
+    mode: "0755"
+  tags: [ "consul" ]
+
+- name: Create file for logs
+  ansible.builtin.file:
+    path: /var/log/consul/consul.log
+    state: touch
+    owner: consul
+    group: consul
+    mode: "0644"
+  tags: [ "consul" ]
+
+- name: Update resolved to use ansible dns
+  ansible.builtin.blockinfile:
+    path: /etc/systemd/resolved.conf
+    block: |
+      [Resolve]
+      DNS=127.0.0.1:8600
+      DNSSEC=false
+      Domains=~consul
+  tags: [ "consul" ]
+
+- name: Restart resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: restarted
+  tags: [ "consul" ]
+
+- name: Start Consul service
+  ansible.builtin.service:
+    name: consul
+    state: restarted
+    enabled: true
+  tags: [ "consul" ]
