@@ -1,0 +1,37 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop:
+    - mariadb-server
+    - python3-mysqldb
+
+  tags: [ "system" ]
+
+- name: Bind to all interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regex: ^bind\-address\s.+\=\s*127\.0\.0\.1
+    line: bind-address = 0.0.0.0
+  notify:
+    - Start Mariadb
+  tags: [ "system" ]
+
+- name: Create DB
+  community.mysql.mysql_db:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: "{{ mysql_db }}"
+    state: present
+  tags: [ "db" ]
+
+- name: Create DB user
+  community.mysql.mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    state: present
+    name: "{{ mysql_user }}"
+    password: "{{ mysql_pass }}"
+    priv: "{{ mysql_db }}.*:ALL,GRANT"
+    host: '%'
+  tags: [ "db" ]
+

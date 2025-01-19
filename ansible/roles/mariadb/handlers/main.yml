@@ -1,0 +1,4 @@
+- name: Start Mariadb
+  ansible.builtin.service:
+    name: mariadb
+    state: started
