@@ -1,0 +1,76 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "system" ]
+
+- name: Make sure ipv4 forwarding is enabled
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    line: net.ipv4.ip_forward=1
+  tags: [ "system" ]
+
+- name: Reload sysctl
+  ansible.builtin.shell: |
+    sysctl -p
+  tags: [ "system" ]
+
+- name: Check if server keys exist
+  ansible.builtin.stat:
+    path: /etc/wireguard/private.key
+  register: keys_exist
+  tags: [ "keys" ]
+
+- name: Create wg server keys
+  ansible.builtin.shell: |
+    wg genkey | tee /etc/wireguard/private.key
+    cat /etc/wireguard/private.key | wg pubkey | tee /etc/wireguard/public.key
+  when: not keys_exist.stat.exists
+  tags: [ "keys" ]
+
+- name: Get server private key
+  ansible.builtin.slurp:
+    src: /etc/wireguard/private.key
+  register: private_key_slurp
+  tags: [ "keys" ]
+
+- name: Get private key contents
+  set_fact:
+    private_key: "{{ private_key_slurp.content | b64decode | trim }}"
+  tags: [ "keys" ]
+
+- name: debug
+  ansible.builtin.debug:
+    msg: "{{ private_key_slurp.content }}, {{ private_key }}"
+  tags: [ "keys" ]
+
+- name: Create Folders for clients
+  ansible.builtin.file:
+    path: "/etc/wireguard/{{ item }}"
+    state: directory
+  loop: "{{ groups['clients'] }}"
+  tags: [ "clients" ]
+
+- name: Create wg keys for clients
+  ansible.builtin.shell: |
+    wg genkey | tee /etc/wireguard/{{ item }}/private.key
+    cat /etc/wireguard/{{ item }}/private.key | wg pubkey | tee /etc/wireguard/{{ item }}/public.key
+  loop: "{{ groups['clients'] }}"
+  tags: [ "clients" ]
+
+- name: Copy wireguard server template
+  ansible.builtin.template:
+    src: templates/wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+  # notify:
+  #   - Start Wireguard
+  tags: [ "config", "clients", "keys" ]
+
+- name: Add clients keys to server
+  ansible.builtin.shell: |
+    pub_key=$(cat /etc/wireguard/{{ item }}/public.key)
+    wg set wg0 peer $pub_key allowed-ips {{ hostvars[item]['address'] }}
+  loop: "{{ groups['clients'] }}"
+  tags: [ "config" ]

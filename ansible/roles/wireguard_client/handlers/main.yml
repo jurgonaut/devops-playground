@@ -1,0 +1,5 @@
+- name: Start Wireguard
+  ansible.builtin.service:
+    name: wg-quick@wg0.service
+    state: started
+

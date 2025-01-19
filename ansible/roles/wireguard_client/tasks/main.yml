@@ -1,0 +1,49 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  notify:
+    - Start Wireguard
+  tags: [ "system" ]
+
+# Synchronize doesn't work for root so we need to manually copy
+# the files from the wireguard server
+- name: Copy the keys
+  ansible.builtin.shell: |
+    rsync root@{{ groups['servers'][0] }}:/etc/wireguard/public.key /etc/wireguard/server-public.key
+    rsync root@{{ groups['servers'][0] }}:/etc/wireguard/{{ inventory_hostname }}/private.key /etc/wireguard/private.key
+  tags: [ "config" ]
+
+- name: Get server public key
+  ansible.builtin.slurp:
+    src: /etc/wireguard/server-public.key
+  register: server_public_key_slurp
+  tags: [ "config" ]
+
+- name: Get server public key contents
+  set_fact:
+    server_public_key: "{{ server_public_key_slurp.content | b64decode | trim }}"
+  tags: [ "config" ]
+
+- name: Get server ip
+  set_fact:
+    server_ip: "{{ groups['servers'][0] }}"
+
+- name: Get client private key
+  ansible.builtin.slurp:
+    src: /etc/wireguard/private.key
+  register: client_private_key_slurp
+  tags: [ "config" ]
+
+- name: Get client private key contents
+  set_fact:
+    client_private_key: "{{ client_private_key_slurp .content | b64decode | trim }}"
+  tags: [ "config" ]
+
+- name: Copy wireguard client template
+  ansible.builtin.template:
+    src: templates/wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+  tags: [ "config" ]

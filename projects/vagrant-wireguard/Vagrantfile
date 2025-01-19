@@ -1,0 +1,41 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby
+
+Vagrant.configure("2") do |config|
+    config.ssh.insert_key = false
+
+    config.vm.provider :virtualbox do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "2064"]
+    end
+
+    config.vm.define "hostA" do |hostA|
+        hostA.vm.hostname = "hostA.dev"
+        hostA.vm.box = "bento/ubuntu-22.04"
+        hostA.vm.network "private_network", ip: "192.168.56.20"
+        # Add blackhole to make the HostB unreachable directly
+        hostA.vm.provision "shell",
+            run: "always",
+            inline: <<-SHELL
+                ip route add blackhole 192.168.57.0/24
+            SHELL
+    end
+
+    config.vm.define "node1" do |node1|
+        node1.vm.hostname = "node1.dev"
+        node1.vm.box = "bento/ubuntu-22.04"
+        node1.vm.network "private_network", ip: "192.168.56.10"
+        node1.vm.network "private_network", ip: "192.168.57.10"
+    end
+
+    config.vm.define "hostB" do |hostB|
+        hostB.vm.hostname = "hostB.dev"
+        hostB.vm.box = "bento/ubuntu-22.04"
+        hostB.vm.network "private_network", ip: "192.168.57.20"
+        # Add blackhole to make the HostA unreachable directly
+        hostB.vm.provision "shell",
+            run: "always",
+            inline: <<-SHELL
+                ip route add blackhole 192.168.56.0/24
+            SHELL
+    end
+end
