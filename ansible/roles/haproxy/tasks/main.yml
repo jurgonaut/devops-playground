@@ -7,12 +7,11 @@
   tags: [ "system" ]
 
 # Run only when configuration_template_path is defined, if not
-# it means that the configuration in managed outside Haproxy task
+# it means that the configuration in managed outside Haproxy role
 - name: Copy config file
   ansible.builtin.template:
     src: "{{ configuration_template_path }}"
     dest: /etc/haproxy/haproxy.cfg
   notify: Restart Haproxy
   when: configuration_template_path != None
-  changed_when: true
   tags: [ "proxy" ]
