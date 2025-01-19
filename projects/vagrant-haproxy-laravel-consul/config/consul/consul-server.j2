@@ -1,0 +1,12 @@
+# Configuration for server
+datacenter = "local"
+data_dir = "/opt/consul"
+log_level = "INFO"
+node_name = "master"
+server = true
+ui = true
+encrypt = "{{ key }}"
+retry_join = [ "{{ servers }}" ]
+bind_addr = "{{ inventory_hostname }}"
+log_file = "/var/log/consul/consul.log"
+bootstrap_expect = 1

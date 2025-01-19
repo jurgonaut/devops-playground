@@ -1,0 +1,11 @@
+Description=Consul template
+After=network.target consul.service
+
+[Service]
+Type=simple
+ExecStart=consul-template -config=/etc/consul-template.d/consul-template.hcl
+Restart=on-failure
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

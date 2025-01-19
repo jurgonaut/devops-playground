@@ -1,0 +1,15 @@
+# Configuration for client
+datacenter = "local"
+data_dir = "/opt/consul"
+log_level = "INFO"
+encrypt = "{{ key }}"
+retry_join = [ "{{ servers }}" ]
+bind_addr = "{{ inventory_hostname }}"
+log_file = "/var/log/consul/consul.log"
+services {
+    name = "{{ service_name }}"
+    id = "{{ service_name }}"
+    address = "{{ inventory_hostname }}"
+    port = {{ service_port }}
+    tags = [ "{{ service_name }}" ]
+}

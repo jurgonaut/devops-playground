@@ -1,0 +1,11 @@
+- name: Setup Mariadb
+  hosts: "{{ variable_host | default('db') }}"
+  become: true
+  pre_tasks:
+    - name: Set variables
+      ansible.builtin.include_vars:
+        ../env-vars.yml
+      tags:
+        - always
+  roles:
+    - { role: mariadb }

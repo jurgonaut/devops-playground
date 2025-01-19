@@ -1,0 +1,5 @@
+domain: devops-playground.com
+mysql_db: "website"
+mysql_user: "admin"
+mysql_pass: "Supersecret1234"
+key: rbIbz7iP9+VA9pFguiRW4zRaHePAoptIEAiJZe25nJs=

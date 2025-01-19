@@ -1,0 +1,27 @@
+- name: Setup Laravel App
+  hosts: "{{ variable_host | default('web') }}"
+  become: true
+  pre_tasks:
+    - name: Set web variables
+      ansible.builtin.include_vars:
+        ../env-vars.yml
+      tags:
+        - always
+  roles:
+    - {
+        role: consul,
+        configuration_template_path: ../config/consul/consul-client.j2,
+        server: false,
+        service_name: "web",
+        service_port: 80,
+        servers: "{{ hostvars[groups['proxy'][0]].inventory_hostname }}"
+      }
+    - { role: nginx }
+    - {
+        role: laravel,
+        domain: devops-playground.com,
+        nginx_template_path: ../config/app/web.conf.j2,
+        env_template_path: ../config/app/env.j2,
+        install_script_path: ../config/app/install.sh,
+        mysql_host: "{{ hostvars[groups['db'][0]].inventory_hostname }}"
+      }

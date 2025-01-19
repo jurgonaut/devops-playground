@@ -1,0 +1,24 @@
+- name: Setup Haproxy
+  hosts: "{{ variable_host | default('proxy') }}"
+  become: true
+  pre_tasks:
+    - name: Set variables
+      ansible.builtin.include_vars:
+        ../env-vars.yml
+      tags:
+        - always
+  roles:
+    - { role: haproxy }
+    - {
+        role: consul,
+        configuration_template_path: ../config/consul/consul-server.j2,
+        server: true,
+        servers: "{{ inventory_hostname }}"
+      }
+    - {
+        role: consul_template,
+        systemd_service_template_path: ../config/consul-template/consul-template.service,
+        configuration_template_path: ../config/consul-template/consul-template.hcl,
+        managed_template_src: ../config/consul-template/haproxy.cfg.tpl,
+        managed_template_dest: /etc/haproxy/haproxy.cfg.tpl
+      }
