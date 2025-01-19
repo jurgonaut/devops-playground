@@ -1,0 +1,18 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  tags: [ "system" ]
+
+# Run only when configuration_template_path is defined, if not
+# it means that the configuration in managed outside Haproxy task
+- name: Copy config file
+  ansible.builtin.template:
+    src: "{{ configuration_template_path }}"
+    dest: /etc/haproxy/haproxy.cfg
+  notify: Restart Haproxy
+  when: configuration_template_path != None
+  changed_when: true
+  tags: [ "proxy" ]
