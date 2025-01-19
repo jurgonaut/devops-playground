@@ -7,13 +7,10 @@
   ansible.builtin.debug:
     msg: "Cloning git repo {{ git_repo_dir }}"
 
-- name: Check if tmp_dir and git_repo_dir exist
+- name: Check if tmp_dir exist
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ tmp_dir }}"
     state: directory
-  loop:
-    - "{{ tmp_dir }}"
-    - "{{ git_repo_dir }}"
 
 - name: Check if git repository exists
   ansible.builtin.stat:
