@@ -59,12 +59,6 @@
     git_repo: https://github.com/aalhommada/laravel-crud.git
   tags: [ "app" ]
 
-- name: Remove nginx conf if exists
-  ansible.builtin.file:
-    path: /etc/nginx/sites-enabled/web.conf
-    state: absent
-  tags: [ "app" ]
-
 - name: Copy Nginx config
   ansible.builtin.template:
     src: "{{ nginx_template_path }}"
