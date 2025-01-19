@@ -19,7 +19,6 @@
     - { role: nginx }
     - {
         role: laravel,
-        domain: devops-playground.com,
         nginx_template_path: ../config/app/web.conf.j2,
         env_template_path: ../config/app/env.j2,
         install_script_path: ../config/app/install.sh,
