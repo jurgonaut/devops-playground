@@ -1,0 +1,33 @@
+- name: Set git repo dir
+  ansible.builtin.set_fact:
+    # Take only the git user and repository name
+    git_repo_dir: "{{ git_repo.split('/')[3:5] | join('-') }}"
+
+- name: Debug
+  ansible.builtin.debug:
+    msg: "Cloning git repo {{ git_repo_dir }}"
+
+- name: Check if tmp_dir and git_repo_dir exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ tmp_dir }}"
+    - "{{ git_repo_dir }}"
+
+- name: Check if git repository exists
+  ansible.builtin.stat:
+    path: "{{ tmp_dir }}/{{ git_repo_dir }}"
+  register: git_repo_dir_stat
+
+- name: Clone if not exists
+  ansible.builtin.git:
+    repo: "{{ git_repo }}"
+    dest: "{{ tmp_dir }}/{{ git_repo_dir }}"
+  when: not git_repo_dir_stat.stat.exists
+
+- name: Copy to destination
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ tmp_dir }}/{{ git_repo_dir }}/"
+    dest: "{{ destination }}"
