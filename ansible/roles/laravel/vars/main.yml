@@ -1,0 +1,5 @@
+system_modules: [ 'nodejs', 'npm', 'redis', 'software-properties-common', 'apt-transport-https', 'ca-certificates', 'lsb-release', 'unzip' ]
+# Don't install php, becuase that module has a dependency on apache.
+# Instead you should install php-fpm directly, more info here:
+# https://serverfault.com/questions/1009961/why-does-the-command-apt-install-php-try-to-install-apache
+php_modules: [ 'php8.2-fpm', 'php8.2-mysql', 'php8.2-curl', 'php8.2-cli', 'php8.2-dom', 'php8.2-opcache', 'php8.2-bcmath', 'php8.2-gd', 'php8.2-mbstring', 'php8.2-xml', 'php8.2-xmlrpc', 'php8.2-soap', 'php8.2-intl', 'php8.2-zip' ]

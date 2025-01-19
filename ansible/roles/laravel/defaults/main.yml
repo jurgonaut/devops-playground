@@ -1,0 +1,4 @@
+nginx_template_path:
+env_template_path:
+install_script_path:
+domain:

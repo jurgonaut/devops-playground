@@ -1,0 +1,4 @@
+- name: Start Redis
+  ansible.builtin.service:
+    name: redis
+    state: started

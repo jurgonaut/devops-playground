@@ -1,0 +1,101 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ system_modules }}"
+  notify:
+    - Start Redis
+  tags: [ "system" ]
+
+- name: Add Ondrej repostory
+  ansible.builtin.apt_repository:
+    repo: 'ppa:ondrej/php'
+  tags: [ "system" ]
+
+- name: Install php extensions
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop: "{{ php_modules }}"
+  tags: [ "system" ]
+
+- name: Check if Composer is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/composer
+  register: composer_exe
+  tags: [ "composer" ]
+
+- name: Install Composer
+  ansible.builtin.shell: |
+    curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+    php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+    rm /tmp/composer-setup.php
+  args:
+    chdir: /tmp
+  when: not composer_exe.stat.exists
+  tags: [ "composer" ]
+
+- name: Delete website folder if exists
+  ansible.builtin.file:
+    path: "/var/www/{{ domain }}"
+    state: absent
+  tags: [ "app" ]
+
+- name: Create website folder
+  ansible.builtin.file:
+    path: "/var/www/{{ domain }}"
+    state: directory
+  tags: [ "app" ]
+
+- name: Clone the repo
+  ansible.builtin.include_role:
+    name: git_clone
+    apply:
+      tags: [ "app" ]
+  vars:
+    destination: "/var/www/{{ domain }}"
+    git_repo: https://github.com/aalhommada/laravel-crud.git
+  tags: [ "app" ]
+
+- name: Remove nginx conf if exists
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/web.conf
+    state: absent
+  tags: [ "app" ]
+
+- name: Copy Nginx config
+  ansible.builtin.template:
+    src: "{{ nginx_template_path }}"
+    dest: /etc/nginx/sites-enabled/web.conf
+  notify:
+    - Restart Nginx
+  tags: [ "app" ]
+
+- name: Copy Laravel env
+  ansible.builtin.template:
+    src: "{{ env_template_path }}"
+    dest: "/var/www/{{ domain }}/.env"
+  tags: [ "app" ]
+
+- name: Copy install script
+  ansible.builtin.copy:
+    src: "{{ install_script_path }}"
+    dest: /tmp/install.sh
+    mode: "0744"
+  tags: [ "app" ]
+
+- name: Run the install script
+  ansible.builtin.shell: /tmp/install.sh
+  args:
+    chdir: "/var/www/{{ domain }}"
+  tags: [ "app" ]
+
+- name: Set permissions on the website folder
+  command: "{{ item }}"
+  with_items:
+    - find /var/www/{{ domain }} -type d -exec chmod 0755 {} \;
+    - find /var/www/{{ domain }} -type f -exec chmod 0644 {} \;
+    - chown -R www-data:www-data /var/www/{{ domain }}
+  tags: [ "app" ]
