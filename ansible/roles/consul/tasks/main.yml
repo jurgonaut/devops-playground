@@ -25,22 +25,6 @@
     mode: "0644"
   tags: [ "consul" ]
 
-# This should not be here
-# - name: Copy Consul server config
-#   ansible.builtin.template:
-#     src: templates/consul-server.j2
-#     dest: /etc/consul.d/consul.hcl
-#   when: server
-#   tags: [ "consul" ]
-
-# # This should not be here
-# - name: Copy Client server config
-#   ansible.builtin.template:
-#     src: templates/consul-client.j2
-#     dest: /etc/consul.d/consul.hcl
-#   when: not server
-#   tags: [ "consul" ]
-
 - name: Create dir for logs
   ansible.builtin.file:
     path: /var/log/consul

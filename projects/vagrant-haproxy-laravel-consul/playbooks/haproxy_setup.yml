@@ -12,7 +12,6 @@
     - {
         role: consul,
         configuration_template_path: ../config/consul/consul-server.j2,
-        server: true,
         servers: "{{ inventory_hostname }}"
       }
     - {
