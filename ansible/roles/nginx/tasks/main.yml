@@ -1,0 +1,8 @@
+- name: Install system packages
+  ansible.builtin.apt:
+    name: nginx
+    update_cache: yes
+    state: present
+  notify:
+    - Restart Nginx
+  tags: [ "system" ]
