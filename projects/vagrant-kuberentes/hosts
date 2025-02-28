@@ -1,4 +1,4 @@
-[kubernetes-main]
+[kubernetes-master]
 192.168.56.10
 
 [kubernetes-worker]

@@ -1,0 +1,40 @@
+---
+- name: Setup Load balancer
+  hosts: "{{ host | default('kubernetes-master')  }}"
+  become: true
+  become_user: vagrant
+  tasks:
+    - name: Install metallb
+      ansible.builtin.shell: |
+        kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+      tags: [ "metallb" ]
+
+    # https://github.com/metallb/metallb/issues/1597#issuecomment-1571473129
+    - name: Fix POST request failing
+      ansible.builtin.shell: |
+        kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io metallb-webhook-configuration
+      tags: [ "metallb" ]
+
+    - name: Copy load balancer config
+      ansible.builtin.copy:
+        src: ../deployments/metallb-config.yaml
+        dest: /home/vagrant
+        owner: vagrant
+        group: vagrant
+        mode: "0755"
+      tags: [ "metallb" ]
+
+    - name: Apply Metallb config
+      ansible.builtin.shell: |
+        kubectl apply -f ./metallb-config.yaml
+      tags: [ "metallb" ]
+
+    - name: Create deployment
+      ansible.builtin.shell: |
+        kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0
+      tags: [ "metallb" ]
+
+    - name: Expose deployment
+      ansible.builtin.shell: |
+        kubectl expose deployment hello-server --type LoadBalancer --port 80 --target-port 8080
+      tags: [ "metallb" ]

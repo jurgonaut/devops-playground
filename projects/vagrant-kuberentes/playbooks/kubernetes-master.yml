@@ -1,0 +1,77 @@
+---
+- name: Setup kubernetes master
+  hosts: "{{ host | default('kubernetes-master') }}"
+  become: true
+  roles:
+    - { role: kubeadm }
+  post_tasks:
+    - name: Check if etcd exists
+      stat:
+        path: /var/lib/etcd
+      register: kube_initialized
+      tags: [ "master" ]
+
+    # We need --pod-network-cidr=10.244.0.0/16 for flannel
+    - name: Init
+      ansible.builtin.command: |
+        kubeadm init --apiserver-advertise-address 192.168.56.10 --control-plane-endpoint 192.168.56.10 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.18.0.0/24 --cri-socket unix:///var/run/cri-dockerd.sock
+      when: not kube_initialized.stat.exists
+      tags: [ "master" ]
+
+    - name: Create .kube directory
+      ansible.builtin.file:
+        path: "/home/{{ user }}/.kube"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: "0775"
+      when: not kube_initialized.stat.exists
+      tags: [ "master" ]
+
+    - name: Copy admin conf
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ user }}/.kube/config"
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: "0775"
+        remote_src: yes
+      when: not kube_initialized.stat.exists
+      tags: [ "master" ]
+
+    - name: Fix Vagrant not using correct IP
+      ansible.builtin.shell: |
+        echo 'KUBELET_KUBEADM_ARGS="--container-runtime-endpoint=unix:///var/run/cri-dockerd.sock --pod-infra-container-image=registry.k8s.io/pause:3.10 --node-ip=192.168.56.10"' > /var/lib/kubelet/kubeadm-flags.env
+        systemctl restart kubelet.service
+      when: not kube_initialized.stat.exists
+      tags: [ "master" ]
+
+    - name: Apply network configuration
+      become: yes
+      become_user: vagrant
+      ansible.builtin.shell: |
+        kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+      when: not kube_initialized.stat.exists
+      tags: [ "worker" ]
+
+    - name: Get token
+      ansible.builtin.shell: |
+        kubeadm token list | awk '{print $1}' | sed -n '2p'
+      register: token
+      tags: [ "master" ]
+
+    - name: Debug
+      ansible.builtin.debug:
+        msg: "{{ token.stdout }}"
+      tags: [ "master" ]
+
+    - name: Get cert hash
+      ansible.builtin.shell: |
+        cat /etc/kubernetes/pki/ca.crt | openssl x509 -pubkey  | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+      register: cert_hash
+      tags: [ "master" ]
+
+    - name: Debug
+      ansible.builtin.debug:
+        msg: "{{ cert_hash.stdout }}"
+      tags: [ "master" ]

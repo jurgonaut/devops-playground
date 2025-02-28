@@ -1,0 +1,32 @@
+---
+- name: Setup kubernetes master
+  hosts: "{{ host | default('kubernetes-worker')  }}"
+  become: true
+  vars:
+    token:
+    cert_hash:
+  roles:
+    - { role: kubeadm }
+  post_tasks:
+    - name: Check if etcd exists
+      stat:
+        path: /var/lib/etcd
+      register: kube_initialized
+      tags: [ "worker" ]
+
+    - name: Fix Vagrant not using correct IP
+      ansible.builtin.shell: |
+        echo 'KUBELET_KUBEADM_ARGS="--container-runtime-endpoint=unix:///var/run/cri-dockerd.sock --pod-infra-container-image=registry.k8s.io/pause:3.10 --node-ip=192.168.56.20"' > /var/lib/kubelet/kubeadm-flags.env
+        systemctl restart kubelet.service
+      when: not kube_initialized.stat.exists
+      tags: [ "worker" ]
+
+    - name: Connect to cluster
+      ansible.builtin.shell: |
+        kubeadm join 192.168.56.10:6443 \
+        --discovery-token {{ token }}  \
+        --discovery-token-ca-cert-hash sha256:{{ cert_hash }} \
+        --cri-socket=unix:///var/run/cri-dockerd.sock \
+        -v2
+      when: not kube_initialized.stat.exists
+      tags: [ "worker" ]
